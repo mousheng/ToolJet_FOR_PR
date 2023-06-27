@@ -628,29 +628,35 @@ class EditorComponent extends React.Component {
     }
   };
 
+    // 查找祖先
+    findAncestor = (components, ancestorID, id) => {
+      if (components[id]?.parent) {
+        if (components[id].parent.startsWith(ancestorID)) {
+          return true
+        } else {
+          return this.findAncestor(components, ancestorID, components[id].parent.slice(0, 36))
+        }
+      }
+      return false
+    }
+  
+
   removeComponent = (component) => {
     const currentPageId = this.state.currentPageId;
     if (!this.isVersionReleased()) {
       let newDefinition = cloneDeep(this.state.appDefinition);
       // Delete child components when parent is deleted
 
-      let childComponents = [];
-
-      if (newDefinition.pages[currentPageId].components?.[component.id].component.component === 'Tabs') {
-        childComponents = Object.keys(newDefinition.pages[currentPageId].components).filter((key) =>
-          newDefinition.pages[currentPageId].components[key].parent?.startsWith(component.id)
-        );
-      } else {
-        childComponents = Object.keys(newDefinition.pages[currentPageId].components).filter(
-          (key) => newDefinition.pages[currentPageId].components[key].parent === component.id
-        );
-      }
+      let components = newDefinition.pages[currentPageId].components
+      let childComponents = Object.keys(components).filter((key) =>
+        this.findAncestor(components, component.id, key)
+      );
 
       childComponents.forEach((componentId) => {
-        delete newDefinition.pages[currentPageId].components[componentId];
+        delete components[componentId];
       });
 
-      delete newDefinition.pages[currentPageId].components[component.id];
+      delete components[component.id];
       const platform = navigator?.userAgentData?.platform || navigator?.platform || 'unknown';
       if (platform.toLowerCase().indexOf('mac') > -1) {
         toast('Component deleted! (⌘ + Z to undo)', {
